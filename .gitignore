@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+#unit tests?
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+
+#db directories
+db/
+db.sqlite3
+db.sqlite3-journal
+
+.env
+.venv
+env/
+venv/
+
+*.log
