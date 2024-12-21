@@ -1,7 +1,9 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from openai import OpenAI
 
-class LLMClient():
+from singleton import Singleton
+
+class LLMClient(metaclass=Singleton):
     """
     simple LLM Api client
     """

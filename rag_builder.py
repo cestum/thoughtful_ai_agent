@@ -5,9 +5,11 @@ from langchain.retrievers import MultiVectorRetriever
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
+from singleton import Singleton
 
-class RAGBuilder:
+class RAGBuilder(metaclass=Singleton):
     """
+    Singletin class-
     Class to build RAG database. It uses chroma vector DB. 
     We will use Questions and ANswers vectors in db. 
     MultiVectorRetriever could be a good use here.

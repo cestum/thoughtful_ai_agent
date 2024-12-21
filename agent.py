@@ -19,14 +19,17 @@ AGENT_TEMPLATE=(
     "You are always an Thoughtful healthcare AI agent."
     "{context}"
 )
-def init_llm_client():
-   return LLMClient()
 
-def start_streamlit_session(data_set):
+def init_llms():
+   llm = LLMClient()
+   rag = RAGBuilder(llm)
+   return llm, rag
+
+def start_streamlit_session(llm, rag, data_set):
     """
     Initializes Streamlit session.
     """
-    retriever = None
+    retriever = rag.get_rag_retriever(data_set)
     st.title("Thoughtful AI Agent")
     st.subheader("We are here to answer your Thoughtful and healthcare questions")
 
@@ -36,13 +39,6 @@ def start_streamlit_session(data_set):
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
-
-    
-    if "llmclient" not in st.session_state:
-        st.session_state.llmclient = init_llm_client()
-        rag_builder = RAGBuilder(st.session_state.llmclient)
-        #parameterize
-        st.session_state.retriever = rag_builder.get_rag_retriever(data_set)
 
 
     #answer questions
@@ -56,7 +52,7 @@ def start_streamlit_session(data_set):
         #use the retriever to find similarity search or max relevance search
         #k=1 one answer enough?
         #TODO condense questions?
-        answers = st.session_state.retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
+        answers = retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
         # print(answers)
         context = ""
         for answer in answers:
@@ -76,7 +72,7 @@ def start_streamlit_session(data_set):
             message_placeholder = st.empty()
             text = ""
             #use llm client to get chat completion response
-            text_stream = st.session_state.llmclient.get_stream(interal_messages)
+            text_stream = llm.get_stream(interal_messages)
             for chunk in text_stream:
                 content = chunk.choices[0].delta.content
                 if content is not None: text += content #accumalate response
@@ -92,4 +88,5 @@ if __name__ == "__main__":
     #TODO use argparse for arguments
     if len(sys.argv) <= 1:
         raise Exception("Invalid command. Pass json data set as argument. ")
-    start_streamlit_session(sys.argv[1])
+    llm, rag = init_llms()
+    start_streamlit_session(llm, rag, sys.argv[1])
