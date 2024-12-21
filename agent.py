@@ -43,7 +43,11 @@ def start_streamlit_session():
         #use the retriever to find similarity search or max relevance search
         #k=1 one answer enough?
         answers = st.session_state.retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
-        print(answers)
+        # print(answers)
+        context = ""
+        for answer in answers:
+            #use answer as primary content?
+            context = context + f"; Content: {answer.metadata.get("answer")} \n" + f" Related question: {answer.page_content}" 
 
         with st.chat_message("agent"):
             message_placeholder = st.empty()
