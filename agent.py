@@ -4,6 +4,7 @@ import json
 import streamlit as st
 
 from llm_client import LLMClient
+from rag_builder import RAGBuilder
 
 def init_llm_client():
    return LLMClient()
@@ -12,6 +13,7 @@ def start_streamlit_session():
     """
     Initializes Streamlit session.
     """
+    retriever = None
     st.title("Thoughtful AI Agent")
     st.subheader("We are here to answer your Thoughtful and healthcare questions")
 
@@ -22,8 +24,12 @@ def start_streamlit_session():
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
+    
     if "llmclient" not in st.session_state:
         st.session_state.llmclient = init_llm_client()
+        rag_builder = RAGBuilder(st.session_state.llmclient)
+        #parameterize
+        st.session_state.retriever = rag_builder.get_rag_retriever("./data/sample.json")
 
 
     #answer questions
@@ -34,6 +40,11 @@ def start_streamlit_session():
         with st.chat_message("user"): #show prompted question
             st.markdown(prompt)
         
+        #use the retriever to find similarity search or max relevance search
+        #k=1 one answer enough?
+        answers = st.session_state.retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
+        print(answers)
+
         with st.chat_message("agent"):
             message_placeholder = st.empty()
             text = ""
@@ -44,7 +55,6 @@ def start_streamlit_session():
                 if content is not None: text += content #accumalate response
                 message_placeholder.markdown(text)
             message_placeholder.markdown(text)
-
 
         #save agent answer to history
         st.session_state.messages.append({"role":"agent", "content": text})
