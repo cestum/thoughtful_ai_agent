@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 
@@ -17,7 +18,7 @@ AGENT_TEMPLATE=(
 def init_llm_client():
    return LLMClient()
 
-def start_streamlit_session():
+def start_streamlit_session(data_set):
     """
     Initializes Streamlit session.
     """
@@ -37,7 +38,7 @@ def start_streamlit_session():
         st.session_state.llmclient = init_llm_client()
         rag_builder = RAGBuilder(st.session_state.llmclient)
         #parameterize
-        st.session_state.retriever = rag_builder.get_rag_retriever("./data/sample.json")
+        st.session_state.retriever = rag_builder.get_rag_retriever(data_set)
 
 
     #answer questions
@@ -50,6 +51,7 @@ def start_streamlit_session():
         
         #use the retriever to find similarity search or max relevance search
         #k=1 one answer enough?
+        #TODO condense questions?
         answers = st.session_state.retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
         # print(answers)
         context = ""
@@ -82,4 +84,8 @@ def start_streamlit_session():
 
 #main code
 if __name__ == "__main__":
-    start_streamlit_session()
+    #usage streamlit run agent.py "./data/sample.json"
+    #TODO use argparse for arguments
+    if len(sys.argv) <= 1:
+        raise Exception("Invalid command. Pass json data set as argument. ")
+    start_streamlit_session(sys.argv[1])
