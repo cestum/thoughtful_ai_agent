@@ -6,23 +6,24 @@ from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
 from singleton import Singleton
+from abstract_rag_retriever import AbstractRAGRetriever
 
-class RAGBuilder(metaclass=Singleton):
+class MVRetreiver(AbstractRAGRetriever):
     """
-    Singletin class-
     Class to build RAG database. It uses chroma vector DB. 
     We will use Questions and ANswers vectors in db. 
     MultiVectorRetriever could be a good use here.
     May be start with Questions and add answers to metadata.
     """
 
-    def __init__(self,  llm_client):
+    def __init__(self,  data, llm_client):
         self.vectorstore = Chroma(
             collection_name="thoughtfulai", 
             persist_directory="db", 
             embedding_function=llm_client.embeddings
         )
         self.memstore = InMemoryByteStore()
+        self.retriever = self.get_rag_retriever(data)
 
     def get_rag_retriever(self, data_location):
         docs = {}
@@ -54,3 +55,12 @@ class RAGBuilder(metaclass=Singleton):
         retriever.docstore.mset(list(zip(qas_ids,qas))) #for now set id and question vector
         return retriever
 
+    def query(self, query, result_limit=1):
+        results= self.retriever.vectorstore.max_marginal_relevance_search(query, k=result_limit)
+        out = []
+        for result in results:
+            out.append({
+                "metadata": result.metadata,
+                "content": result.page_content,
+            })        
+        return out

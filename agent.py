@@ -5,7 +5,8 @@ import json
 import streamlit as st
 
 from llm_client import LLMClient
-from rag_builder import RAGBuilder
+from mv_retriever import MVRetreiver
+from inmemory_retriever import InmemoryRetreiver
 
 #ok, sample agent template requries work
 AGENT_TEMPLATE=(
@@ -20,16 +21,16 @@ AGENT_TEMPLATE=(
     "{context}"
 )
 
-def init_llms():
-   llm = LLMClient()
-   rag = RAGBuilder(llm)
-   return llm, rag
+def init_llms(data_set):
+    llm = LLMClient()
+    # rag = InmemoryRetreiver(data_set, llm)
+    rag = MVRetreiver(data_set, llm)
+    return llm, rag
 
-def start_streamlit_session(llm, rag, data_set):
+def start_streamlit_session(llm, rag):
     """
     Initializes Streamlit session.
     """
-    retriever = rag.get_rag_retriever(data_set)
     st.title("Thoughtful AI Agent")
     st.subheader("We are here to answer your Thoughtful and healthcare questions")
 
@@ -52,12 +53,12 @@ def start_streamlit_session(llm, rag, data_set):
         #use the retriever to find similarity search or max relevance search
         #k=1 one answer enough?
         #TODO condense questions?
-        answers = retriever.vectorstore.max_marginal_relevance_search(prompt, k=1)
+        answers = rag.query(prompt)
         # print(answers)
         context = ""
         for answer in answers:
             #use answer as primary content?
-            context = context + f"; Content: {answer.metadata.get("answer")} \n" + f" Related question: {answer.page_content}" 
+            context = context + f"; Content: {answer.get("metadata", {}).get("answer")} \n" + f" Related question: {answer.get("content")}" 
         system_template_content = AGENT_TEMPLATE.format(context = context)
 
         # we may need to introduce a system template here for retrieval.
@@ -88,5 +89,5 @@ if __name__ == "__main__":
     #TODO use argparse for arguments
     if len(sys.argv) <= 1:
         raise Exception("Invalid command. Pass json data set as argument. ")
-    llm, rag = init_llms()
-    start_streamlit_session(llm, rag, sys.argv[1])
+    llm, rag = init_llms(sys.argv[1])
+    start_streamlit_session(llm, rag)
