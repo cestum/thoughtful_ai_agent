@@ -5,8 +5,9 @@ from langchain.retrievers import MultiVectorRetriever
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
-from singleton import Singleton
-from abstract_rag_retriever import AbstractRAGRetriever
+from langchain_openai import OpenAIEmbeddings
+
+from .abstract_rag_retriever import AbstractRAGRetriever
 
 class MVRetreiver(AbstractRAGRetriever):
     """
@@ -16,11 +17,14 @@ class MVRetreiver(AbstractRAGRetriever):
     May be start with Questions and add answers to metadata.
     """
 
-    def __init__(self,  data, llm_client):
+    def __init__(self,  data, embedding_model):
+        #We will add embeddings for vector db embedding
+        embeddings = OpenAIEmbeddings(model=embedding_model)
+
         self.vectorstore = Chroma(
             collection_name="thoughtfulai", 
             persist_directory="db", 
-            embedding_function=llm_client.embeddings
+            embedding_function=embeddings
         )
         self.memstore = InMemoryByteStore()
         self.retriever = self.get_rag_retriever(data)

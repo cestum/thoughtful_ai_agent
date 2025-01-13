@@ -10,14 +10,14 @@ from haystack.document_stores.in_memory import InMemoryDocumentStore
 
 
 from singleton import Singleton
-from abstract_rag_retriever import AbstractRAGRetriever
+from .abstract_rag_retriever import AbstractRAGRetriever
 
 class InmemoryRetreiver(AbstractRAGRetriever):
     """
     Class to build RAG database. It uses InMemoryDocumentStore. 
     """
 
-    def __init__(self,  data, llm_client):
+    def __init__(self,  data):
         self.text_embedder = SentenceTransformersTextEmbedder()
         self.text_embedder.warm_up()
         self.memstore = InMemoryDocumentStore()

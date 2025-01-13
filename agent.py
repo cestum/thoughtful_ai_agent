@@ -1,12 +1,14 @@
 import sys
 import os
 import json
+import platform
+import logging
 
 import streamlit as st
+import torch
 
-from llm_client import LLMClient
-from mv_retriever import MVRetreiver
-from inmemory_retriever import InmemoryRetreiver
+from llm import GPTLLM, HuggingfaceLLM, MLXLLM
+from rag import MVRetreiver, InmemoryRetreiver
 
 #ok, sample agent template requries work
 AGENT_TEMPLATE=(
@@ -21,10 +23,31 @@ AGENT_TEMPLATE=(
     "{context}"
 )
 
+logger = logging.getLogger(__name__)
+
 def init_llms(data_set):
-    llm = LLMClient()
-    # rag = InmemoryRetreiver(data_set, llm)
-    rag = MVRetreiver(data_set, llm)
+    os = platform.system()
+    device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+    # llm = GPTLLM("gpt-4o")
+    # llm = HuggingfaceLLM("llama-3")
+    # rag = InmemoryRetreiver(data_set)
+    logger.info("OS is %s ", os)
+    if os == "Darwin":
+        logger.info("Using MLX framework")
+        llm = MLXLLM("mlx_llama_3_1_8b")
+        rag = InmemoryRetreiver(data_set)
+    elif device == "cuda":
+        logger.info("Using HuggingfaceLLM")
+        llm = HuggingfaceLLM("llama-3")
+        rag = InmemoryRetreiver(data_set)
+    else:
+        logger.info("Using OpenAI gpt-4o api")
+        llm = GPTLLM("gpt-4o")
+        rag = InmemoryRetreiver(data_set)        
+
+    #alternative to InMemory
+    # embedding_model = "text-embedding-3-large"
+    # rag = MVRetreiver(data_set, embedding_model)
     return llm, rag
 
 def start_streamlit_session(llm, rag):
@@ -75,7 +98,7 @@ def start_streamlit_session(llm, rag):
             #use llm client to get chat completion response
             text_stream = llm.get_stream(interal_messages)
             for chunk in text_stream:
-                content = chunk.choices[0].delta.content
+                content = chunk #chunk.choices[0].delta.content
                 if content is not None: text += content #accumalate response
                 message_placeholder.markdown(text)
             message_placeholder.markdown(text)
