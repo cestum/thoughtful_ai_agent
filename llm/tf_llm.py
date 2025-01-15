@@ -6,6 +6,7 @@ from transformers import (
     AutoModel
 )
 import torch
+from .models import MODEL_PATHS
 
 class TFLLM():
     """
@@ -14,14 +15,15 @@ class TFLLM():
     model_name = None
     name = None
 
-    def __init__(self, model_path):
+    def __init__(self, model):
         self.name = None
         self.temperature = 0.9
         self.max_tokens = 2048
         self.top_p=0.9
+        self.model_path = MODEL_PATHS.get(model)
         self.pipeline = pipeline(
             "text-generation",
-            model=model_path,
+            model=self.model_path,
             model_kwargs={"torch_dtype": torch.bfloat16},
             device_map="auto"
         )

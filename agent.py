@@ -7,7 +7,7 @@ import logging
 import streamlit as st
 import torch
 
-from llm import GPTLLM, HuggingfaceLLM, MLXLLM
+from llm import GPTLLM, HuggingfaceLLM, MLXLLM, MLCLLM, TFLLM
 from rag import MVRetreiver, InmemoryRetreiver
 
 #ok, sample agent template requries work
@@ -26,6 +26,7 @@ AGENT_TEMPLATE=(
 logger = logging.getLogger(__name__)
 
 def init_llms(data_set):
+    logger.info("Initializing LLMs")
     os = platform.system()
     device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
     # llm = GPTLLM("gpt-4o")
@@ -33,8 +34,13 @@ def init_llms(data_set):
     # rag = InmemoryRetreiver(data_set)
     logger.info("OS is %s ", os)
     if os == "Darwin":
-        logger.info("Using MLX framework")
-        llm = MLXLLM("mlx_llama_3_1_8b")
+        try:
+            logger.info("MacOS: Trying MLC-LLM framework...")
+            from mlc_llm import MLCEngine
+            llm = MLCLLM("mlc_qwen_32b_q4")
+        except:
+            logger.info("MacOS: MLC-LLM not found. Trying MLX framework...")
+            llm = MLXLLM("mlx_llama_3_1_8b") #mlx_llama_3_1_70b #mlx_llama_3_1_8b        
         rag = InmemoryRetreiver(data_set)
     elif device == "cuda":
         logger.info("Using HuggingfaceLLM")
@@ -64,7 +70,6 @@ def start_streamlit_session(llm, rag):
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-
     #answer questions
     if prompt := st.chat_input("What do you want to know?"):
         #save to historu
@@ -77,20 +82,21 @@ def start_streamlit_session(llm, rag):
         #k=1 one answer enough?
         #TODO condense questions?
         answers = rag.query(prompt)
-        # print(answers)
+        print("Answers: ", len(answers))
         context = ""
         for answer in answers:
             #use answer as primary content?
-            context = context + f"; Content: {answer.get("metadata", {}).get("answer")} \n" + f" Related question: {answer.get("content")}" 
+            context = context + f'; Content: {answer.get("metadata", {}).get("answer")} \n' 
         system_template_content = AGENT_TEMPLATE.format(context = context)
 
         # we may need to introduce a system template here for retrieval.
         # use a separate internal_message array to pass it to llm
         interal_messages = []
-        for m in st.session_state.messages:
-            interal_messages.append({"role": m["role"], "content": m["content"]})
         #add agent context
         interal_messages.append({"role":"system", "content": system_template_content})
+
+        for m in st.session_state.messages:
+            interal_messages.append({"role": m["role"], "content": m["content"]})
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()

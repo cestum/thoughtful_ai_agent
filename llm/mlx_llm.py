@@ -1,5 +1,5 @@
 import os
-
+import torch
 from mlx_lm import stream_generate, load
 from mlx_lm.models.cache import load_prompt_cache, make_prompt_cache, save_prompt_cache
 
@@ -20,17 +20,23 @@ class MLXLLM():
         self.model_path = MODEL_PATHS.get(model)
         self.model, self.tokenizer = load(
             self.model_path,
-            tokenizer_config={"trust_remote_code": True},
+            tokenizer_config={
+                "trust_remote_code": True,
+                # "eos_token": "<|endoftext|>"
+            },
         )
+        #avoids MPS backend out of memory 
+        torch.mps.set_per_process_memory_fraction(0.0)
         self.prompt_cache = make_prompt_cache(self.model)
-
-                
+     
     def get_stream(self, messages):
         input_text = self.tokenizer.apply_chat_template(
             messages,
-            tokenize=True,
+            # tokenize=False,
             add_generation_prompt=True,
         )
+        output = ""
+        curr_output = ""        
         for resp in stream_generate(
             self.model,
             self.tokenizer,

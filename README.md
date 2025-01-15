@@ -15,7 +15,7 @@ Available here `data\sample.json`
 
 Setup a python env and install required libraries
 
-`pip install -r requirements.txt`
+`uv pip install -r requirements.txt`
 
 Setup OPENAI key
 
